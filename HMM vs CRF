@@ -1,0 +1,129 @@
+import pandas as pd
+import csv
+
+#Import the corpus
+corpus = pd.read_csv("isiSwati POS Tagging Corpus.txt", sep='\t', header=None, quoting=csv.QUOTE_NONE,names=['TOKEN', 'MORPH_ANALYSIS','LEMMA','XPOS', 'UPOS'])
+print(corpus)
+
+#HMM
+#Build the Model
+#Importing the required libraries
+import nltk
+import nltk.tag.hmm as hmm
+from sklearn.model_selection import train_test_split
+from nltk import word_tokenize
+nltk.download('punkt')
+
+#Creating your training and test sets
+x = corpus[['TOKEN','XPOS']]
+y = corpus['UPOS']
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=100)
+
+#Formatiing your training set
+x_train_data = []
+for _, row in x_train.iterrows():
+    tokens = row['TOKEN'].split()
+    xposs = row['XPOS'].split()
+    if len(tokens) == len(xposs):
+        sentence = [(token, xpos) for token, xpos in zip(tokens, xposs)]
+        x_train_data.append(sentence)
+
+#Training the model
+tagger = hmm.HiddenMarkovModelTagger.train(x_train_data)
+
+#Make predictions
+!pip install hmmlearn
+from hmmlearn import hmm
+
+y_hmm_test_pred = [tagger.tag(sentence) for sentence in y_test]
+
+#Evaluate Model Performance
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import f1_score
+
+# Flatten the list of predicted labels for evaluation
+y_predicted = [label for sublist in y_hmm_test_pred for _, label in sublist]
+
+# Ensure y_test and y_predicted have the same length
+y_test_flattened = [label for sublist in y_test for label in sublist]
+assert len(y_test_flattened) == len(y_predicted), "Lengths of y_test and y_predicted are different"
+
+# Evaluate the model using accuracy
+accuracy = accuracy_score(y_test_flattened, y_predicted)
+print("Accuracy:", accuracy)
+precision = precision_score(y_test_flattened, y_predicted, average='weighted')
+print("Precision:",precision)
+recall = recall_score(y_test_flattened, y_predicted, average='weighted')
+print("Recall Score:",recall)
+f1 = f1_score(y_test_flattened, y_predicted, average='weighted')
+print("F1 Score:",f1)
+
+
+
+
+
+
+#CRF
+#Build the Model
+#Importing the required libraries
+!pip install sklearn_crfsuite
+import nltk
+!pip install pycrfsuite
+import pycrfsuite
+from sklearn.model_selection import train_test_split
+from nltk.tag import CRFTagger
+nltk.download('punkt')
+
+#Creating your training and test sets
+x = corpus[['TOKEN','XPOS']]
+y = corpus['UPOS']
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=100)
+
+#Formatting your training data
+x_train_data = []
+for _, row in x_train.iterrows():
+    tokens = row['TOKEN'].split()
+    xposs = row['XPOS'].split()
+    if len(tokens) == len(xposs):
+        sentence = [(token, xpos) for token, xpos in zip(tokens, xposs)]
+        x_train_data.append(sentence)
+
+#Training the model
+ct = CRFTagger()
+ct.train(x_train_data, 'model.crf.tagger')
+
+x_test_data = []
+for _, row in x_test.iterrows():
+    tokens = row['TOKEN'].split()
+    sentence = [(token,) for token in tokens]  # Use a single-element tuple for each token
+    x_test_data.append(sentence)
+
+x_crf_test = [ct.tag_sents(sent) for sent in x_train_data]
+
+#Make a Prediction
+import nltk
+!pip install pycrfsuite
+import pycrfsuite
+
+# Make predictions on the test data and evaluate the performance
+y_test_pred = [ct.tag([token for token, in sent]) for sent in x_test_data]
+
+#Evaluate Model Performance
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import f1_score
+
+y_predicted = [label for sublist in y_test_pred for _, label in sublist]
+accuracy = accuracy_score(y_test,y_predicted)
+print("Accuracy:", accuracy)
+precision = precision_score(y_test, y_predicted, average='weighted')
+print("Precision:",precision)
+recall = recall_score(y_test, y_predicted, average='weighted')
+print("Recall Score:",recall)
+f1 = f1_score(y_test, y_predicted, average='weighted')
+print("F1 Score:",f1)
